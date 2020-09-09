@@ -1,0 +1,383 @@
+\documentclass{beamer}
+\usepackage[utf8]{inputenc}
+
+\usepackage{utopia} %font utopia imported
+\usetheme{Madrid}
+\usecolortheme{default}
+
+%------------------------------------------------------------
+%This block of code defines the information to appear in the
+%Title page
+\title[An FMI-Based initialization plugin for INTO-CPS Maestro 2] %optional
+{An FMI-Based initialization plugin for INTO-CPS Maestro 2 - Long}
+\date{\today}
+\usepackage{booktabs}
+\usepackage{natbib}
+\usepackage{tikz}
+\usepackage{multicol}
+\usepackage{hyperref}
+\usepackage{pgfplots}
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage{environ}
+\usepackage{filecontents}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{verbatim}
+\usepackage{graphicx}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{stmaryrd}
+\usepackage{amstext}
+\usepackage{semantic}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+\input{commands}
+\input{case_study_results}
+
+\urlstyle{same}
+\author[Thrane Hansen, Simon] % (optional)
+{S. Thrane Hansen\inst{1}, C. Thule\inst{1} and C. Gomes\inst{1}}
+\institute[AU] % (optional)
+{
+  \inst{1}%
+  Department of Engineering\\
+  Computer Engineering \\
+  Aarhus University
+}
+
+\date[AU 2020] % (optional)
+{Presentation CO-sim CPS, \today}
+
+%\logo{\includegraphics[height=1.5cm]{lion-logo.jpg}}
+
+%End of title page configuration block
+%------------------------------------------------------------
+
+
+
+%------------------------------------------------------------
+%The next block of commands puts the table of contents at the 
+%beginning of each section and highlights the current section:
+
+
+%------------------------------------------------------------
+
+\begin{document}
+
+\NewEnviron{scaletikzpicturetowidth}[1]{%
+  \def\tikz@width{#1}%
+  \def\tikzscale{1}\begin{lrbox}{\measure@tikzpicture}%
+  \BODY
+  \end{lrbox}%
+  \pgfmathparse{#1/\wd\measure@tikzpicture}%
+  \edef\tikzscale{\pgfmathresult}%
+  \BODY
+}
+
+%The next statement creates the title page.
+\frame{\titlepage}
+
+%---------------------------------------------------------
+%This block of code is for the table of contents after
+%the title page
+\begin{frame}
+\frametitle{Table of Contents}
+\tableofcontents
+\end{frame}
+%---------------------------------------------------------
+
+\section{Motivation}
+\begin{frame}
+\frametitle{Co-Simulation is a tool to analyze \textbf{non-trivial} systems}
+\begin{itemize}
+    \item Developing of  
+    \item FMU-based co-simulation
+    \item The simulation units have different natures
+\end{itemize}
+The Functional Mock-up Interface specification (FMI) handles the heterogeneous simulation units.
+
+\end{frame}
+
+\begin{frame}
+\frametitle{FMU-based Co-Simulation}
+\begin{columns}
+\column{0.5\textwidth}
+\begin{itemize}
+    \item 3 phases (Initialization, Simulation, Teardown)
+    \item FMI describes how to interact the each FMU (get, set)
+\end{itemize}
+\column{0.5\textwidth}
+\begin{figure}
+    \centering
+    \includegraphics[scale=0.3]{images/Screenshot 2020-09-09 at 08.38.44.png}
+\end{figure}
+\end{columns}
+
+The goal of the \textbf{Initialization} phase is to make sure that all interconnected FMU variables is assigned a stable initial value. 
+
+\end{frame}
+
+\begin{frame}
+\frametitle{But doesn't FMI describe the Initialization of a Co-Simulation?}
+FMI describes how to initialize a single FMU and non-connected FMU variables.
+The initialization of connected FMUs introduces more challenges (precedence constraints)
+
+\begin{figure}
+    \centering
+    \includegraphics[scale=1.5]{images/ExpansionPlugin-Page-3.pdf}
+\end{figure}
+Initialization order: $ct.Valve -> wt.valveControl -> wt.level -> ct.level$
+\begin{alertblock}{Initialization order} 
+    The initialization order is not always trivial! 
+\end{alertblock}
+\end{frame}
+
+\begin{frame}
+\frametitle{Non-trivial Co-Simulation scenarios}
+\begin{figure}
+    \centering
+    \includegraphics[scale=0.6]{images/quarter_car_SCC.pdf}
+    \label{fig:SCC_quarter}
+\end{figure}
+\begin{itemize}
+    \item Algebraic loop - an FMU variable dependence on itself.
+\end{itemize}
+A loop needs a specific initialization strategy to achieve a correct simulation result!
+\textbf{Not} all scenarios containing are stable.
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Importance of initializing the loops correctly}
+\begin{figure}
+\centering
+\begin{tikzpicture}
+    \begin{axis}[
+        at={(0,0)},
+        width= 10cm,
+        height = 7cm,
+        ymin=-20,
+        ymax=5,
+        xmin=0,
+        xmax=4.1,
+        grid=both,
+        grid style={line width=.1pt, draw=gray!10},
+        major grid style={line width=.2pt,draw=gray!50},
+        axis lines=middle,
+        minor tick num =5,
+        axis line style={latex-latex},
+        ticklabel style={font=\tiny,fill=white},
+        minor tick style={draw=none},
+        minor grid style={thin,color=black!10},
+        ylabel= Car chassis position (cm),
+        xlabel= Time (s),
+        tick align=outside,
+        x label style={at={(axis description cs:0.5,-0.1)},anchor=north, color=blue!50!cyan},
+        y label style={at={(axis description cs:-0.1,.5)},rotate=90,anchor=south, color=blue!50!cyan},
+        x tick label style={
+            /pgf/number format/assume math mode, font=\sf\scriptsize}
+        ]
+    \addplot [line width=2.5pt, red] table [x= a, y=c, col sep=comma] {incorrect.csv};
+    \addplot [y filter/.code={\pgfmathparse{\pgfmathresult*100.}\pgfmathresult}][line width=2.5pt, blue] table [x=a, y=b, col sep=comma] {correct.csv};
+\end{axis}
+\end{tikzpicture}
+    \caption{Simulation results}
+    \label{fig:init_state_0_sim}
+\end{figure}
+
+\end{frame}
+
+\section{So how to handle these non-trivial scenarios?}
+\begin{frame}
+\frametitle{So how to handle these non-trivial scenarios?}
+The characteristics of the co-simulation determines the initialization strategy
+\begin{enumerate}[I]
+    \item Identify the characteristics of the co-simulation scenario
+    \item Calculation of a correct initialization order
+    \item Initializing the interconnected FMU-variables
+\end{enumerate}
+\end{frame}
+
+\begin{frame}
+\frametitle{Identification of non-trivial co-simulation scenarios}
+\begin{itemize}
+    \item A graph-based a approach 
+    \item The problem is to find all SCCs of the graph
+\end{itemize}
+\begin{figure}
+    \centering
+    \includegraphics[scale=0.6]{images/quarter_car_SCC.pdf}
+    \caption{Generation of a graph of interconnected FMU-variables}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Calculation of a correct initialization order}
+The initialization order is the topological ordering of the SCC of the graph.
+
+\begin{exampleblock}{Optimization of the initialization order}
+Variables of a single FMU can be set/read in bulk!
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}
+\frametitle{The initialization strategy for algebraic loops}
+    Each loop is initialized using a fixed point iteration strategy until convergence.
+    
+\begin{figure}
+    \centering
+    \includegraphics[scale=0.6]{images/ExpansionPlugin-Page-4.pdf}
+\end{figure}
+    
+\begin{alertblock}{Convergence}
+    Convergence of a loop is not guaranteed!
+\end{alertblock}
+    
+\end{frame}
+
+\begin{frame}
+\frametitle{Checking for convergence}
+How do we make sure that our system has reached a stable initial state?
+Within a finite number of iterations convergence should  be established.
+\begin{figure}
+    \centering
+    \includegraphics[scale=0.3]{images/Screenshot 2020-09-09 at 20.51.28.png}
+\end{figure}
+
+If convergence is not established the co-simulation is dismissed!
+\end{frame}
+
+\begin{frame}
+\frametitle{The initialization strategy for trivial SCC}
+The initialization of trivial SCC is performing the correspondent variable action (set,get) 
+    
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{The complete approach}
+\begin{figure}
+    \centering
+    \includegraphics[scale=0.25]{images/Screenshot 2020-09-09 at 09.12.56.png}
+\end{figure}
+
+\begin{block}{Remark} 
+    The approach is suitable with all well-established master algorithms ()
+\end{block}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Maestro 2}
+\begin{itemize}
+    \item A part of the INTO-CPS application and a successor of the Maestro.    
+    \item Separates the specification (MaBL) of a co-simulation from the simulation.
+    \item The specification is typically generated by some plugins
+\end{itemize}
+\begin{figure}
+    \centering
+    \includegraphics[scale=0.6]{images/ExpansionPlugin-Page-1.pdf}
+    \label{fig:my_label}
+\end{figure}
+\end{frame}
+
+
+\begin{frame}[fragile]
+\frametitle{Maestro Base Language (MaBL)}
+The specification of a co-simulation is expressed in MaBL.
+
+\begin{lstlisting}[language=C++]
+simulation
+import Initializer;
+{
+FMI2 tankcontroller = load("FMI2", "{8c4e810f-3df3-4a00-8276-176fa3c9f000}", "src/test/resources/watertankcontroller-c.fmu");
+...
+FMI2Component crtlInstance = tankcontroller.instantiate("crtlInstance", false, false);;
+IFmuComponent components[2]={wtInstance,crtlInstance};
+expand initialize(components,START_TIME, END_TIME);
+
+SingleWatertank.freeInstance(wtInstance);
+}
+\end{lstlisting}
+\end{frame}
+
+
+%---------------------------------------------------------
+%Changing visivility of the text
+\begin{frame}
+\frametitle{The implementation of the Approach}
+\begin{itemize}
+    \item An expansion plugin to Maestro 2
+    \item The plugin generates the initialization procedure
+    \item The plugin can handle both trivial and non-trivial co-simulation scenarios
+    \item The identification of SCCs and topological sorting is done by Tarjan's Algorithm implemented in Scala
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{How do the know the plugin is working?}
+\begin{itemize}
+    \item The plugin has been verified against the existing \textit{Initializer}
+    \item Gomes et al. made an encoding of the rules of order between the FMU operations in Prolog
+    \item The calculated initialization order gets checked by the Prolog program
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Summary - the key takeaways!}
+\begin{itemize}
+    \item A correct initialization of a co-simulation is crucial to obtain a trustworthy result!
+    \item The topological ordering of the interconnected FMU variables  is the initialization order
+    \item Co-simulation scenarios containing algebraic loops should be initialized using a fixed-point strategy
+    \item The approach is implemented as an expansion plugin to Maestro 2  
+\end{itemize}
+\end{frame}
+
+\section{Future work}
+
+\begin{frame}
+\frametitle{Future work}
+\begin{itemize}
+    \item Formally verifying the expansion plugin  
+    \item Formal verification to guarantee termination of a co-simulation.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Questions}
+\huge
+Thank you!
+\end{frame}
+
+
+\end{document}
