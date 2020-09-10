@@ -60,12 +60,11 @@
 
 \urlstyle{same}
 \author[Thrane Hansen, Simon] % (optional)
-{S. Thrane Hansen\inst{1}, C. Thule\inst{1} and C. Gomes\inst{1}}
+{S. Thrane Hansen, C. Thule and C. Gomes}
 \institute[AU] % (optional)
 {
-  \inst{1}%
   Department of Engineering\\
-  Computer Engineering \\
+  %Computer Engineering \\
   Aarhus University
 }
 
@@ -390,7 +389,7 @@ SingleWatertank.freeInstance(wtInstance);
 \begin{itemize}
     \item The plugin has been verified against the existing \textit{Initializer}
     \item Gomes et al. made an encoding of the rules of order between the FMU operations in Prolog
-    \item The calculated initialization order gets checked by the Prolog program
+    \item The calculated initialization order is verified against co-simulation step verifier in Prolog.
 \end{itemize}
 \end{frame}
 
@@ -410,7 +409,10 @@ SingleWatertank.freeInstance(wtInstance);
 \begin{frame}
 \frametitle{Future work}
 \begin{itemize}
-    \item Formally verifying the Expansion Plugin  
+    \item Formally verification the Expansion Plugin  
+    \begin{itemize}
+        \item Using the Sireum framework
+    \end{itemize}
     \item Formal verification to guarantee termination of a co-simulation in Maestro 2.
 \end{itemize}
 \end{frame}
