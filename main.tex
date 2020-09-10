@@ -8,7 +8,7 @@
 %------------------------------------------------------------
 %This block of code defines the information to appear in the
 %Title page
-\title[An FMI-Based initialization plugin for INTO-CPS Maestro 2] %optional
+\title[FMI-Based initialization plugin for Maestro 2] %optional
 {An FMI-Based initialization plugin for INTO-CPS Maestro 2}
 \date{\today}
 \usepackage{booktabs}
@@ -29,12 +29,7 @@
 \usepackage{stmaryrd}
 \usepackage{amstext}
 \usepackage{semantic}
-\hypersetup{
-    colorlinks=true,
-    linkcolor=red,
-    filecolor=magenta,      
-    urlcolor=cyan,
-}
+
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
 \definecolor{codepurple}{rgb}{0.58,0,0.82}
@@ -104,7 +99,18 @@
 \end{frame}
 %---------------------------------------------------------
 
-\section{Motivation}
+\section{The Initialization Problem}
+\begin{frame}
+\frametitle{Developing Cyber-Physical Systems are hard!}
+\begin{itemize}
+    \item The problems the systems should solve are hard
+    \item The design of the system is complex
+    \item The systems consist of heterogeneous parts
+    \item The development cycles are getting shorter and shorter
+\end{itemize}
+
+\end{frame}
+
 \begin{frame}
 \frametitle{Co-Simulation is a tool to analyze \textbf{non-trivial} systems}
 \begin{itemize}
@@ -156,7 +162,7 @@ Initialization order: $ct.Valve -> wt.valveControl -> wt.level -> ct.level$
 A simplified version of a car's suspension system.
 \begin{figure}
     \centering
-    \includegraphics[scale=0.6]{images/quarter_car_SCC.pdf}
+    \includegraphics[scale=0.6]{images/quarter_car.pdf}
     \label{fig:SCC_quarter}
 \end{figure}
 \end{frame}
@@ -217,8 +223,8 @@ A loop needs a specific initialization strategy to achieve a correct simulation 
 
 \section{So how to handle these non-trivial scenarios?}
 \begin{frame}
-\frametitle{So how to handle do the obtain a valid result from a non-trivial scenario?}
-\textbf{The characteristics of the co-simulation scenario determines the initialization strategy}
+\frametitle{So how to handle do the obtain a valid initialization of a non-trivial scenario?}
+The recipe:
 \begin{enumerate}[I]
     \item Identify the characteristics of the co-simulation scenario
     \begin{itemize}
@@ -228,6 +234,8 @@ A loop needs a specific initialization strategy to achieve a correct simulation 
     \item Calculation of a correct initialization order
     \item Initializing the interconnected FMU-variables
 \end{enumerate}
+
+\textbf{The characteristics of the co-simulation scenario determines the initialization strategy}
 \end{frame}
 
 \begin{frame}
@@ -238,14 +246,23 @@ A loop needs a specific initialization strategy to achieve a correct simulation 
 \end{itemize}
 \begin{figure}
     \centering
-    \includegraphics[scale=0.6]{images/quarter_car_SCC.pdf}
+    \includegraphics[width=0.9\textwidth]{images/quarter_car-graph.pdf}
     \caption{Generation of a graph of interconnected FMU-variables}
 \end{figure}
 \end{frame}
 
 \begin{frame}
+\frametitle{Identification of SCCs in the graph}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.6\textwidth]{images/quarter_car-SCC.pdf}
+\end{figure}
+
+\end{frame}
+
+\begin{frame}
 \frametitle{Calculation of a correct initialization order}
-The initialization order is the topological ordering of the SCC of the graph.
+The initialization order is then the topological ordering of the SCCs.
 
 \begin{exampleblock}{Optimization of the initialization order}
 Variables of a single FMU can be set/read in bulk!
@@ -253,8 +270,31 @@ Variables of a single FMU can be set/read in bulk!
 \end{frame}
 
 \begin{frame}
+\frametitle{Reminder of the recipe}
+\begin{enumerate}[I]
+    \item Identify the characteristics of the co-simulation scenario
+    \begin{itemize}
+        \item Non-trivial - algebraic loops
+        \item Trivial - no algebraic loops
+    \end{itemize}
+    \item Calculation of a correct initialization order
+    \item Initializing the interconnected FMU-variables using the right strategy in the right order
+    \begin{itemize}
+        \item Simple FMU-action
+        \item Fixed-point iteration
+    \end{itemize}
+\end{enumerate}
+\end{frame}
+
+\begin{frame}
+\frametitle{The initialization strategy for trivial SCC}
+The initialization of trivial SCC is performing the correspondent variable action (set,get) 
+    
+\end{frame}
+        
+\begin{frame}
 \frametitle{The initialization strategy for algebraic loops}
-    Each loop is initialized using a fixed point iteration strategy until convergence.
+Each loop is initialized using a fixed point iteration strategy until convergence.
     
 \begin{figure}
     \centering
@@ -262,7 +302,7 @@ Variables of a single FMU can be set/read in bulk!
 \end{figure}
     
 \begin{alertblock}{Convergence}
-    Convergence of a loop is not guaranteed!
+    The convergence of a loop is not guaranteed!
 \end{alertblock}
     
 \end{frame}
@@ -276,14 +316,10 @@ Within a finite number of iterations convergence should  be established.
     \includegraphics[scale=0.3]{images/Screenshot 2020-09-09 at 20.51.28.png}
 \end{figure}
 
-If convergence is not established the co-simulation is dismissed!
+If convergence is not established, the co-simulation is dismissed!
 \end{frame}
 
-\begin{frame}
-\frametitle{The initialization strategy for trivial SCC}
-The initialization of trivial SCC is performing the correspondent variable action (set,get) 
-    
-\end{frame}
+
 
 \begin{frame}[fragile]
 \frametitle{The complete approach}
@@ -334,19 +370,23 @@ SingleWatertank.freeInstance(wtInstance);
 
 
 %---------------------------------------------------------
-%Changing visivility of the text
+%Changing visibility of the text
 \begin{frame}
-\frametitle{The implementation of the Approach}
+\frametitle{The implementation of the approach}
 \begin{itemize}
     \item An expansion plugin to Maestro 2
     \item The plugin generates the initialization procedure
     \item The plugin can handle both trivial and non-trivial co-simulation scenarios
-    \item The identification of SCCs and topological sorting is done by Tarjan's Algorithm implemented in Scala
+    \item The identification of SCCs and topological sorting is performed by Tarjan's Algorithm implemented in Scala
+    \item The expansion plugin can be used with an arbitrary MA
+    \item The plugin can be configured to define the criteria of convergence and other parameters of the initialization.
 \end{itemize}
 \end{frame}
 
+
+
 \begin{frame}
-\frametitle{How do the know the plugin is working?}
+\frametitle{Verification of the plugin}
 \begin{itemize}
     \item The plugin has been verified against the existing \textit{Initializer}
     \item Gomes et al. made an encoding of the rules of order between the FMU operations in Prolog
@@ -359,7 +399,7 @@ SingleWatertank.freeInstance(wtInstance);
 \frametitle{Summary - the key takeaways!}
 \begin{itemize}
     \item A correct initialization of a co-simulation is crucial to obtain a trustworthy result!
-    \item The topological ordering of the interconnected FMU variables  is the initialization order
+    \item The topological ordering of the interconnected FMU variables is the initialization order
     \item Co-simulation scenarios containing algebraic loops should be initialized using a fixed-point strategy
     \item The approach is implemented as an expansion plugin to Maestro 2  
 \end{itemize}
@@ -370,8 +410,8 @@ SingleWatertank.freeInstance(wtInstance);
 \begin{frame}
 \frametitle{Future work}
 \begin{itemize}
-    \item Formally verifying the expansion plugin  
-    \item Formal verification to guarantee termination of a co-simulation.
+    \item Formally verifying the Expansion Plugin  
+    \item Formal verification to guarantee termination of a co-simulation in Maestro 2.
 \end{itemize}
 \end{frame}
 
