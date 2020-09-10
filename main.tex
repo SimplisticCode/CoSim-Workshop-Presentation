@@ -1,7 +1,7 @@
 \documentclass{beamer}
 \usepackage[utf8]{inputenc}
 
-\usepackage{utopia} %font utopia imported
+\usepackage{fourier} %font utopia imported
 \usetheme{Madrid}
 \usecolortheme{default}
 
@@ -9,7 +9,7 @@
 %This block of code defines the information to appear in the
 %Title page
 \title[An FMI-Based initialization plugin for INTO-CPS Maestro 2] %optional
-{An FMI-Based initialization plugin for INTO-CPS Maestro 2 - Long}
+{An FMI-Based initialization plugin for INTO-CPS Maestro 2}
 \date{\today}
 \usepackage{booktabs}
 \usepackage{natbib}
@@ -21,8 +21,6 @@
 \usepackage{tikz}
 \usepackage{environ}
 \usepackage{filecontents}
-\usepackage{algorithm}
-\usepackage{algpseudocode}
 \usepackage{verbatim}
 \usepackage{graphicx}
 \usepackage{amsfonts}
@@ -33,7 +31,7 @@
 \usepackage{semantic}
 \hypersetup{
     colorlinks=true,
-    linkcolor=blue,
+    linkcolor=red,
     filecolor=magenta,      
     urlcolor=cyan,
 }
@@ -41,6 +39,7 @@
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
 \definecolor{codepurple}{rgb}{0.58,0,0.82}
 \definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\usefonttheme{serif} % <----------- HERE
 
 \lstdefinestyle{mystyle}{
     backgroundcolor=\color{backcolour},   
@@ -62,7 +61,6 @@
 }
 
 \lstset{style=mystyle}
-\input{commands}
 \input{case_study_results}
 
 \urlstyle{same}
@@ -92,18 +90,7 @@
 
 
 %------------------------------------------------------------
-
 \begin{document}
-
-\NewEnviron{scaletikzpicturetowidth}[1]{%
-  \def\tikz@width{#1}%
-  \def\tikzscale{1}\begin{lrbox}{\measure@tikzpicture}%
-  \BODY
-  \end{lrbox}%
-  \pgfmathparse{#1/\wd\measure@tikzpicture}%
-  \edef\tikzscale{\pgfmathresult}%
-  \BODY
-}
 
 %The next statement creates the title page.
 \frame{\titlepage}
@@ -121,8 +108,8 @@
 \begin{frame}
 \frametitle{Co-Simulation is a tool to analyze \textbf{non-trivial} systems}
 \begin{itemize}
-    \item Developing of  
-    \item FMU-based co-simulation
+    \item Developing of CPS are difficult
+    \item FMU-based co-simulation is one solution
     \item The simulation units have different natures
 \end{itemize}
 The Functional Mock-up Interface specification (FMI) handles the heterogeneous simulation units.
@@ -135,7 +122,8 @@ The Functional Mock-up Interface specification (FMI) handles the heterogeneous s
 \column{0.5\textwidth}
 \begin{itemize}
     \item 3 phases (Initialization, Simulation, Teardown)
-    \item FMI describes how to interact the each FMU (get, set)
+    \item FMI describes the interface of each component
+    \item The simulation is controlled by an Master Algorithm
 \end{itemize}
 \column{0.5\textwidth}
 \begin{figure}
@@ -144,14 +132,14 @@ The Functional Mock-up Interface specification (FMI) handles the heterogeneous s
 \end{figure}
 \end{columns}
 
-The goal of the \textbf{Initialization} phase is to make sure that all interconnected FMU variables is assigned a stable initial value. 
-
+The goal of the \textbf{Initialization} phase is define all FMU variables and assign them a \textbf{stable} initial value.
 \end{frame}
 
 \begin{frame}
 \frametitle{But doesn't FMI describe the Initialization of a Co-Simulation?}
 FMI describes how to initialize a single FMU and non-connected FMU variables.
-The initialization of connected FMUs introduces more challenges (precedence constraints)
+The initialization of connected FMUs introduces more challenges (precedence constraints).
+\textbf{Interconnected FMU variables require a specific initialization order}.
 
 \begin{figure}
     \centering
@@ -161,6 +149,16 @@ Initialization order: $ct.Valve -> wt.valveControl -> wt.level -> ct.level$
 \begin{alertblock}{Initialization order} 
     The initialization order is not always trivial! 
 \end{alertblock}
+\end{frame}
+
+\begin{frame}
+\frametitle{Example of a non-trivial Co-Simulation scenario}
+A simplified version of a car's suspension system.
+\begin{figure}
+    \centering
+    \includegraphics[scale=0.6]{images/quarter_car_SCC.pdf}
+    \label{fig:SCC_quarter}
+\end{figure}
 \end{frame}
 
 \begin{frame}
@@ -219,10 +217,14 @@ A loop needs a specific initialization strategy to achieve a correct simulation 
 
 \section{So how to handle these non-trivial scenarios?}
 \begin{frame}
-\frametitle{So how to handle these non-trivial scenarios?}
-The characteristics of the co-simulation determines the initialization strategy
+\frametitle{So how to handle do the obtain a valid result from a non-trivial scenario?}
+\textbf{The characteristics of the co-simulation scenario determines the initialization strategy}
 \begin{enumerate}[I]
     \item Identify the characteristics of the co-simulation scenario
+    \begin{itemize}
+        \item Non-trivial - algebraic loops
+        \item Trivial - no algebraic loops
+    \end{itemize}
     \item Calculation of a correct initialization order
     \item Initializing the interconnected FMU-variables
 \end{enumerate}
@@ -297,7 +299,7 @@ The initialization of trivial SCC is performing the correspondent variable actio
 
 
 \begin{frame}
-\frametitle{Maestro 2}
+\frametitle{INTO-CPS Maestro 2}
 \begin{itemize}
     \item A part of the INTO-CPS application and a successor of the Maestro.    
     \item Separates the specification (MaBL) of a co-simulation from the simulation.
