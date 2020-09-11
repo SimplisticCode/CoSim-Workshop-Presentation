@@ -113,11 +113,10 @@
 \begin{frame}
 \frametitle{Co-Simulation is a tool to analyze \textbf{non-trivial} systems}
 \begin{itemize}
-    \item Developing of CPS are difficult
-    \item FMU-based co-simulation is one solution
-    \item The simulation units have different natures
+    \item FMU-based co-simulation is one way to handle the complexity of these systems
+    \item Co-simulation give us a way to analyze and reason about CPS.
+    \item The Functional Mock-Up Interface handles the different types of the simulation units
 \end{itemize}
-The Functional Mock-up Interface specification (FMI) handles the heterogeneous simulation units.
 
 \end{frame}
 
@@ -252,6 +251,7 @@ The recipe:
 
 \begin{frame}
 \frametitle{Identification of SCCs in the graph}
+A simple matter of picking a graph algorithm that solves this problem.
 \begin{figure}
     \centering
     \includegraphics[width=0.6\textwidth]{images/quarter_car-SCC.pdf}
@@ -266,6 +266,7 @@ The initialization order is then the topological ordering of the SCCs.
 \begin{exampleblock}{Optimization of the initialization order}
 Variables of a single FMU can be set/read in bulk!
 \end{exampleblock}
+The initialization order can often be optimized!
 \end{frame}
 
 \begin{frame}
@@ -288,7 +289,10 @@ Variables of a single FMU can be set/read in bulk!
 \begin{frame}
 \frametitle{The initialization strategy for trivial SCC}
 The initialization of trivial SCC is performing the correspondent variable action (set,get) 
-    
+\begin{figure}
+    \centering
+    \includegraphics[scale=1.5]{images/ExpansionPlugin-Page-3.pdf}
+\end{figure}
 \end{frame}
         
 \begin{frame}
