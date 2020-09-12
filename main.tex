@@ -69,7 +69,7 @@
 }
 
 \date[AU 2020] % (optional)
-{Presentation CO-sim CPS, \today}
+{Presentation CoSim-CPS, \today}
 
 %\logo{\includegraphics[height=1.5cm]{lion-logo.jpg}}
 
@@ -127,16 +127,16 @@
 \begin{itemize}
     \item 3 phases (Initialization, Simulation, Teardown)
     \item FMI describes the interface of each component
-    \item The simulation is controlled by an Master Algorithm
+    \item The simulation is controlled by a Master Algorithm
 \end{itemize}
 \column{0.5\textwidth}
 \begin{figure}
     \centering
-    \includegraphics[scale=0.3]{images/Screenshot 2020-09-09 at 08.38.44.png}
+    \includegraphics[width=0.4\textwidth]{images/initializationCoSim.pdf}
 \end{figure}
 \end{columns}
 
-The goal of the \textbf{Initialization} phase is define all FMU variables and assign them a \textbf{stable} initial value.
+The goal of the \textbf{Initialization} phase is to define and assign the FMU variables with a \textbf{stable} initial value.
 \end{frame}
 
 \begin{frame}
@@ -147,9 +147,9 @@ The initialization of connected FMUs introduces more challenges (precedence cons
 
 \begin{figure}
     \centering
-    \includegraphics[scale=1.5]{images/ExpansionPlugin-Page-3.pdf}
+    \includegraphics[scale=1.0]{images/SimpleFMUS.pdf}
 \end{figure}
-Initialization order: $ct.Valve -> wt.valveControl -> wt.level -> ct.level$
+Initialization order: $T2.P1 -> T1.P2 -> T1.P3 -> T2.P4$
 \begin{alertblock}{Initialization order} 
     The initialization order is not always trivial! 
 \end{alertblock}
@@ -157,26 +157,38 @@ Initialization order: $ct.Valve -> wt.valveControl -> wt.level -> ct.level$
 
 \begin{frame}
 \frametitle{Example of a non-trivial Co-Simulation scenario}
+The suspension system of a car is such a non-trivial system.
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\textwidth]{images/suspension-system.jpg}
+\end{figure}
+The goal of the system is to keep the chassis of the car stable.
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Quarter car suspension system}
 A simplified version of a car's suspension system.
 \begin{figure}
     \centering
-    \includegraphics[scale=0.6]{images/quarter_car.pdf}
+    \includegraphics[width=0.95\textwidth]{images/quarter_car_FMUs.pdf}
     \label{fig:SCC_quarter}
 \end{figure}
+The initial conditions makes the equations of the stepping mode $\neq$ initialization mode
 \end{frame}
 
 \begin{frame}
-\frametitle{Non-trivial Co-Simulation scenarios}
+\frametitle{What makes this co-simulation scenario non-trivial?}
 \begin{figure}
     \centering
-    \includegraphics[scale=0.6]{images/quarter_car_SCC.pdf}
+    \includegraphics[scale=0.6]{images/quarter_car-Page-4.pdf}
     \label{fig:SCC_quarter}
 \end{figure}
 \begin{itemize}
     \item Algebraic loop - an FMU variable dependence on itself.
 \end{itemize}
 A loop needs a specific initialization strategy to achieve a correct simulation result!
-\textbf{Not} all scenarios containing are stable.
+\textbf{Not} all scenarios containing an algebraic loop are stable.
 \end{frame}
 
 \begin{frame}[fragile]
@@ -210,13 +222,50 @@ A loop needs a specific initialization strategy to achieve a correct simulation 
             /pgf/number format/assume math mode, font=\sf\scriptsize}
         ]
     \addplot [line width=2.5pt, red] table [x= a, y=c, col sep=comma] {incorrect.csv};
+    %\addplot [y filter/.code={\pgfmathparse{\pgfmathresult*100.}\pgfmathresult}][line width=2.5pt, blue] table [x=a, y=b, col sep=comma] {correct.csv};
+\end{axis}
+\end{tikzpicture}
+    \caption{Simulation result with the naive initialization approach}
+    \label{fig:init_state_0_sim}
+\end{figure}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Importance of initializing the loops correctly}
+\begin{figure}
+\centering
+\begin{tikzpicture}
+    \begin{axis}[
+        at={(0,0)},
+        width= 10cm,
+        height = 7cm,
+        ymin=-20,
+        ymax=5,
+        xmin=0,
+        xmax=4.1,
+        grid=both,
+        grid style={line width=.1pt, draw=gray!10},
+        major grid style={line width=.2pt,draw=gray!50},
+        axis lines=middle,
+        minor tick num =5,
+        axis line style={latex-latex},
+        ticklabel style={font=\tiny,fill=white},
+        minor tick style={draw=none},
+        minor grid style={thin,color=black!10},
+        ylabel= Car chassis position (cm),
+        xlabel= Time (s),
+        tick align=outside,
+        x label style={at={(axis description cs:0.5,-0.1)},anchor=north, color=blue!50!cyan},
+        y label style={at={(axis description cs:-0.1,.5)},rotate=90,anchor=south, color=blue!50!cyan},
+        x tick label style={
+            /pgf/number format/assume math mode, font=\sf\scriptsize}
+        ]
     \addplot [y filter/.code={\pgfmathparse{\pgfmathresult*100.}\pgfmathresult}][line width=2.5pt, blue] table [x=a, y=b, col sep=comma] {correct.csv};
 \end{axis}
 \end{tikzpicture}
-    \caption{Simulation results}
+    \caption{Simulation results using a fixed point strategy}
     \label{fig:init_state_0_sim}
 \end{figure}
-
 \end{frame}
 
 \section{So how to handle these non-trivial scenarios?}
@@ -251,22 +300,28 @@ The recipe:
 
 \begin{frame}
 \frametitle{Identification of SCCs in the graph}
-A simple matter of picking a graph algorithm that solves this problem.
+The problem is now a well-known and studied graph problem solved by Tarjan.
 \begin{figure}
     \centering
-    \includegraphics[width=0.6\textwidth]{images/quarter_car-SCC.pdf}
+    \includegraphics[width=0.6\textwidth]{images/quarter_car_SCC.pdf}
 \end{figure}
-
 \end{frame}
 
 \begin{frame}
 \frametitle{Calculation of a correct initialization order}
 The initialization order is then the topological ordering of the SCCs.
+In the quarter car example: $SCC1 -> SCC2$
+
+The initialization order can is some cases be optimized!
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.7\textwidth]{images/optimizablescenario.pdf}
+\end{figure}
 
 \begin{exampleblock}{Optimization of the initialization order}
 Variables of a single FMU can be set/read in bulk!
 \end{exampleblock}
-The initialization order can often be optimized!
 \end{frame}
 
 \begin{frame}
@@ -280,19 +335,59 @@ The initialization order can often be optimized!
     \item Calculation of a correct initialization order
     \item Initializing the interconnected FMU-variables using the right strategy in the right order
     \begin{itemize}
-        \item Simple FMU-action
-        \item Fixed-point iteration
+        \item Simple FMU-action - for trivial SCC
+        \item Fixed-point iteration - for non-trivial SCC
     \end{itemize}
 \end{enumerate}
+
+\begin{figure}
+\centering
+\begin{tikzpicture}
+    \begin{axis}[
+        at={(0,0)},
+        width= 6cm,
+        height = 4cm,
+        ymin=-20,
+        ymax=5,
+        xmin=0,
+        xmax=4.1,
+        grid=both,
+        grid style={line width=.1pt, draw=gray!10},
+        major grid style={line width=.2pt,draw=gray!50},
+        axis lines=middle,
+        minor tick num =5,
+        axis line style={latex-latex},
+        ticklabel style={font=\tiny,fill=white},
+        minor tick style={draw=none},
+        minor grid style={thin,color=black!10},
+        ylabel= Position (cm),
+        xlabel= Time (s),
+        tick align=outside,
+        x label style={at={(axis description cs:0.5,-0.1)},anchor=north, color=blue!50!cyan},
+        y label style={at={(axis description cs:-0.1,.5)},rotate=90,anchor=south, color=blue!50!cyan},
+        x tick label style={
+            /pgf/number format/assume math mode, font=\sf\scriptsize}
+        ]
+    \addplot [line width=2.5pt, red] table [x= a, y=c, col sep=comma] {incorrect.csv};
+    \addplot [y filter/.code={\pgfmathparse{\pgfmathresult*100.}\pgfmathresult}][line width=2.5pt, blue] table [x=a, y=b, col sep=comma] {correct.csv};
+\end{axis}
+\end{tikzpicture}
+\end{figure}
 \end{frame}
 
 \begin{frame}
 \frametitle{The initialization strategy for trivial SCC}
-The initialization of trivial SCC is performing the correspondent variable action (set,get) 
+The initialization of trivial SCC is performing the correspondent variable action:
+\begin{itemize}
+    \item Output: Getting the output
+    \item Input: Setting the input
+\end{itemize}
 \begin{figure}
     \centering
-    \includegraphics[scale=1.5]{images/ExpansionPlugin-Page-3.pdf}
+    \includegraphics[scale=1.0]{images/SimpleFMUS.pdf}
 \end{figure}
+Initialization order: $T2.P1 -> T1.P2 -> T1.P3 -> T2.P4$
+
 \end{frame}
         
 \begin{frame}
@@ -315,8 +410,37 @@ Each loop is initialized using a fixed point iteration strategy until convergenc
 How do we make sure that our system has reached a stable initial state?
 Within a finite number of iterations convergence should  be established.
 \begin{figure}
-    \centering
-    \includegraphics[scale=0.3]{images/Screenshot 2020-09-09 at 20.51.28.png}
+\centering
+\begin{tikzpicture}
+    \begin{axis}[
+        width= 9cm,
+        height = 6cm,
+        ymin=-1,
+        ymax=1,
+        xmin=1,
+        xmax=25,
+        grid=both,
+        grid style={line width=.1pt, draw=gray!10},
+        major grid style={line width=.2pt,draw=gray!50},
+        axis lines=middle,
+        minor tick num =5,
+        axis line style={latex-latex},
+        ticklabel style={font=\tiny,fill=white},
+        minor tick style={draw=none},
+        minor grid style={thin,color=black!10},
+        ylabel= Difference by successive iterations,
+        xlabel= Iterations,
+        tick align=outside,
+        x label style={at={(axis description cs:0.5,-0.1)},anchor=north, color=blue!50!cyan},
+        y label style={at={(axis description cs:-0.1,.5)},rotate=90,anchor=south, color=blue!50!cyan},
+        x tick label style={
+            /pgf/number format/assume math mode, font=\sf\scriptsize}
+        ]
+    \addplot [line width=1pt, blue] table [x= x, y=con, col sep=comma] {convergence.csv};
+    \addplot [line width=1pt, red] table [x= x, y=non, col sep=comma] {convergence.csv};
+
+\end{axis}
+\end{tikzpicture}
 \end{figure}
 
 If convergence is not established, the co-simulation is dismissed!
@@ -332,7 +456,7 @@ If convergence is not established, the co-simulation is dismissed!
 \end{figure}
 
 \begin{block}{Remark} 
-    The approach is suitable with all well-established master algorithms ()
+    The approach does not constraint the choice of a Master algorithm
 \end{block}
 \end{frame}
 
@@ -360,13 +484,11 @@ The specification of a co-simulation is expressed in MaBL.
 simulation
 import Initializer;
 {
-FMI2 tankcontroller = load("FMI2", "{8c4e810f-3df3-4a00-8276-176fa3c9f000}", "src/test/resources/watertankcontroller-c.fmu");
+FMI2 chassis = load("FMI2", "{8c4e810f-3df3-4a00-8276-176fa3c9f000}", "src/chassis-c.fmu");
 ...
-FMI2Component crtlInstance = tankcontroller.instantiate("crtlInstance", false, false);;
-IFmuComponent components[2]={wtInstance,crtlInstance};
+IFmuComponent components[3]={chassis,suspension, road};
 expand initialize(components,START_TIME, END_TIME);
-
-SingleWatertank.freeInstance(wtInstance);
+...
 }
 \end{lstlisting}
 \end{frame}
@@ -386,24 +508,12 @@ SingleWatertank.freeInstance(wtInstance);
 \end{itemize}
 \end{frame}
 
-
-
-\begin{frame}
-\frametitle{Verification of the plugin}
-\begin{itemize}
-    \item The plugin has been verified against the existing \textit{Initializer}
-    \item Gomes et al. made an encoding of the rules of order between the FMU operations in Prolog
-    \item The calculated initialization order is verified against co-simulation step verifier in Prolog.
-\end{itemize}
-\end{frame}
-
-
 \begin{frame}
 \frametitle{Summary - the key takeaways!}
 \begin{itemize}
     \item A correct initialization of a co-simulation is crucial to obtain a trustworthy result!
-    \item The topological ordering of the interconnected FMU variables is the initialization order
-    \item Co-simulation scenarios containing algebraic loops should be initialized using a fixed-point strategy
+    \item The topological ordering of the SCC of the interconnected FMU variables is the initialization order
+    \item Co-simulation scenarios containing algebraic loops is initialized using a fixed-point strategy
     \item The approach is implemented as an expansion plugin to Maestro 2  
 \end{itemize}
 \end{frame}
